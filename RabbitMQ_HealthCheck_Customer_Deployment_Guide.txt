@@ -1,0 +1,128 @@
+================================================================================
+  Tanzu RabbitMQ Health Check — Customer Deployment Guide
+  Script v1.0.0  |  Tanzu Platform 10+  |  RabbitMQ 4.x
+  Broadcom Tanzu Platform Support
+================================================================================
+
+
+WHAT THIS SCRIPT DOES
+----------------------
+- Connects to the RabbitMQ Management API from a jump host (read-only, no changes)
+- Runs health checks across 18 categories: cluster, resources, queues, HA, security, streams, application health
+- Produces an HTML report with evidence logs and a ZIP for Broadcom Support
+- No software installed on cluster. No SSH. No config changes. No credentials in reports.
+
+
+JUMP HOST PRE-REQUISITES
+--------------------------
+Required:
+  - Linux/macOS jump host with HTTPS network access to RabbitMQ Management API
+  - bash 4+, curl, jq
+
+Optional (enable additional checks):
+  - openssl          → TLS certificate expiry check
+  - zip              → ZIP report packaging
+  - bosh CLI         → BOSH VM infrastructure checks
+
+RabbitMQ user permissions:
+  - monitoring tag   → Required for most checks (nodes, shovels, federation)
+  - administrator tag → Required for user security checks (/api/users)
+
+
+STEP 1 — Copy script to jump host
+------------------------------------
+  scp tanzu_rmq_healthcheck.sh ubuntu@<jumpbox-ip>:/home/ubuntu/rmq/
+  chmod +x /home/ubuntu/rmq/tanzu_rmq_healthcheck.sh
+
+
+STEP 2 — Create the config file
+----------------------------------
+  Option A — Setup wizard (recommended, creates config interactively):
+
+    bash /home/ubuntu/rmq/tanzu_rmq_healthcheck.sh --init
+
+  Option B — Manual: copy rmq.conf.sample and fill in 3 required fields:
+
+    customer=Acme-Corp
+    url=https://rmq-host.example.com
+    username=monitor-user
+    password=S3cur3P@ss
+
+  Optional fields (add to config if needed):
+    - bosh_deployment, bosh_environment, bosh_client, bosh_client_secret, bosh_ca_cert
+      (all five required together for BOSH VM inventory checks)
+
+
+STEP 3 — Validate setup (optional)
+-------------------------------------
+  Tests connectivity and permissions without running health checks:
+
+    bash /home/ubuntu/rmq/tanzu_rmq_healthcheck.sh --config rmq.conf --check-config
+
+
+STEP 4 — Run the health check
+--------------------------------
+    bash /home/ubuntu/rmq/tanzu_rmq_healthcheck.sh --config /home/ubuntu/rmq/rmq.conf
+
+  - Pre-scan runs first and shows what is accessible
+  - On interactive TTY: press C (continue), R (re-run after fix), or Q (quit)
+  - Typical run: 15–45 seconds
+
+
+STEP 5 — Find your output
+----------------------------
+  Reports are written to: reports/<Customer>_healthcheck_<timestamp>/
+
+    reports/
+    └── Acme-Corp_healthcheck_20261117_013321/
+        ├── rmq-host_rmq_health_report_20261117_013321.html   ← open in browser
+        ├── execution.log
+        └── errors.log
+    Acme-Corp_healthcheck_20261117_013321.zip
+
+
+STEP 6 — Review before sharing
+---------------------------------
+  Open the HTML report and check for sensitive content before sharing:
+    - Queue names and vhost names (may reveal business domain)
+    - Cluster hostname and API URL
+
+  NOT collected: passwords, message bodies, shovel/federation URIs, usernames
+
+  Share the ZIP with Broadcom Support via the approved support channel.
+
+
+REPORT STATUS REFERENCE
+-------------------------
+  PASS          Meets health baseline — no action needed
+  WARNING       Exceeds soft threshold — investigate
+  CRITICAL      Exceeds hard threshold — act immediately
+  REVIEW        Needs customer judgment — not a failure
+  NOT VERIFIED  Missing access or tooling — root cause shown in report
+
+  Exit codes: 0 = clear | 1 = warnings | 2 = critical | 3 = incomplete | 4 = config error
+
+
+COMMON ISSUES
+--------------
+  HTTP 401 on /api/nodes     → Grant 'monitoring' tag to the RabbitMQ user
+  HTTP 401 on /api/users     → Grant 'administrator' tag
+  SSL certificate error      → TLS cert expired; renew via Ops Manager
+                               Use --insecure flag in lab/dev environments only
+  Wrong URL format           → Use https://hostname only (no /api/... path)
+                               Script auto-strips paths if pasted by mistake
+  ZIP not created            → Install zip: apt install zip
+
+
+MULTIPLE CLUSTERS
+------------------
+  Run separately per cluster with its own config file:
+
+    bash tanzu_rmq_healthcheck.sh --config cluster1.conf
+    bash tanzu_rmq_healthcheck.sh --config cluster2.conf
+
+
+================================================================================
+  Tanzu RabbitMQ Health Check v1.0.0  |  Broadcom Tanzu Platform Support
+  Read-only · Non-invasive · Customer-controlled · For authorized support use only
+================================================================================

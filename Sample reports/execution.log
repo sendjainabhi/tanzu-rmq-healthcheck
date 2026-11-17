@@ -1,0 +1,66 @@
+2026-11-16T20:50:37Z | TOOL-bash PASS: Bash
+2026-11-16T20:50:37Z | TOOL-curl PASS: curl
+2026-11-16T20:50:37Z | TOOL-jq PASS: jq
+2026-11-16T20:50:37Z | TOOL-openssl PASS: OpenSSL
+2026-11-16T20:50:37Z | TOOL-bosh PASS: BOSH CLI
+2026-11-16T20:50:37Z | TOOL-cf PASS: CF CLI
+2026-11-16T20:50:39Z | GET /api/overview HTTP 200
+2026-11-16T20:50:39Z | TILE-01 REVIEW: RabbitMQ runtime version
+2026-11-16T20:50:39Z | TILE-03 PASS: Management plugin version match
+2026-11-16T20:50:39Z | MON-02 PASS: Management stats collection mode
+2026-11-16T20:50:39Z | FTR-01 PASS: RabbitMQ 4.x runtime
+2026-11-16T20:50:40Z | MSG-03 PASS: Live redelivery rate
+2026-11-16T20:50:40Z | GET /api/nodes HTTP 200
+2026-11-16T20:50:40Z | expected_nodes auto-detected from API: 1
+2026-11-16T20:50:40Z | CLU-01 PASS: Node availability
+2026-11-16T20:50:40Z | CLU-04 PASS: Network partition (split-brain)
+2026-11-16T20:50:40Z | CLU-05 PASS: Node type (disc vs ram)
+2026-11-16T20:50:40Z | CLU-02 PASS: Node resource alarms
+2026-11-16T20:50:40Z | MEM-01 PASS: Memory watermark utilization: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-16T20:50:40Z | ERL-01 PASS: File descriptors: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-16T20:50:40Z | ERL-02 PASS: Erlang processes: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-16T20:50:40Z | DISK-01 PASS: Disk-free headroom: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-16T20:50:40Z | GET /api/health/checks/virtual-hosts HTTP 200
+2026-11-16T20:50:40Z | CLU-06 PASS: Virtual host health
+2026-11-16T20:50:40Z | GET /api/health/checks/alarms HTTP 200
+2026-11-16T20:50:41Z | CLU-03 PASS: Cluster-wide alarm endpoint
+2026-11-16T20:50:41Z | GET /api/queues?page=1&page_size=100&pagination=true&disable_stats=false HTTP 200
+2026-11-16T20:50:41Z | QUE-01 PASS: Queue inventory collected
+2026-11-16T20:50:41Z | FTR-02 REVIEW: Queue type inventory
+2026-11-16T20:50:41Z | QUE-04 PASS: Queue process state
+2026-11-16T20:50:41Z | QUE-02 PASS: Total ready messages
+2026-11-16T20:50:41Z | QUE-03 PASS: Backlogged queues without consumers
+2026-11-16T20:50:41Z | QUE-05 PASS: Unacknowledged messages ratio
+2026-11-16T20:50:41Z | MSG-04 PASS: Consumer utilization (slow consumers)
+2026-11-16T20:50:41Z | MSG-01 REVIEW: Top ready-message queues (snapshot)
+2026-11-16T20:50:41Z | HA-01 WARNING: Quorum queue leader balance
+2026-11-16T20:50:41Z | HA-02 NOT VERIFIED: Quorum replica majority and leader
+2026-11-16T20:50:42Z | STR-01 PASS: Stream queue state
+2026-11-16T20:50:42Z | STR-02 WARNING: Stream queue replica health
+2026-11-16T20:50:42Z | STR-03 REVIEW: Stream queues without consumers
+2026-11-16T20:50:42Z | CLS-01 PASS: Classic queue inventory
+2026-11-16T20:50:42Z | GET /api/connections HTTP 200
+2026-11-16T20:50:42Z | CON-01 REVIEW: Active connections
+2026-11-16T20:50:42Z | CON-02 PASS: Blocked/blocking connections
+2026-11-16T20:50:42Z | GET /api/channels HTTP 200
+2026-11-16T20:50:42Z | CON-03 REVIEW: Active channels
+2026-11-16T20:50:42Z | GET /api/policies HTTP 200
+2026-11-16T20:50:42Z | CFG-01 REVIEW: Queue policy inventory
+2026-11-16T20:50:42Z | GET /api/feature-flags HTTP 200
+2026-11-16T20:50:43Z | FTR-03 PASS: Khepri metadata store
+2026-11-16T20:50:43Z | CFG-02 REVIEW: Feature flags
+2026-11-16T20:50:43Z | GET /api/shovels HTTP 200
+2026-11-16T20:50:43Z | DR-03 REVIEW: Shovel status
+2026-11-16T20:50:43Z | GET /api/federation-links HTTP 200
+2026-11-16T20:50:43Z | DR-04 REVIEW: Federation link health
+2026-11-16T20:50:43Z | GET /api/users HTTP 200
+2026-11-16T20:50:43Z | SEC-02 PASS: Default guest user
+2026-11-16T20:50:43Z | SEC-03 PASS: Administrator user count
+2026-11-16T20:50:43Z | SEC-01 CRITICAL: Presented TLS certificate expiry
+2026-11-16T20:50:45Z | BOSH-01 PASS: BOSH VM process state
+2026-11-16T20:50:45Z | TILE-02 NOT VERIFIED: Tile patch and service plan
+2026-11-16T20:50:45Z | DISK-02 NOT VERIFIED: Persistent disk I/O latency
+2026-11-16T20:50:45Z | MSG-02 NOT VERIFIED: Historical throughput and redelivery trend
+2026-11-16T20:50:45Z | CFG-03 NOT VERIFIED: Runtime parameters and limits
+2026-11-16T20:50:45Z | MON-01 NOT VERIFIED: Metrics delivery and alert routing
+2026-11-16T20:50:45Z | DR-01 NOT VERIFIED: Backup and recovery readiness

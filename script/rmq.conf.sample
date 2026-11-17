@@ -1,0 +1,69 @@
+# ==============================================================================
+# Tanzu RabbitMQ Health Check — Sample Config File
+# Copy this file to rmq.conf, fill in your values, and run:
+#   bash tanzu_rmq_healthcheck.sh --config rmq.conf
+#
+# TIP: Run with --init to create this file interactively instead of editing:
+#   bash tanzu_rmq_healthcheck.sh --init
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# REQUIRED FIELDS
+# ------------------------------------------------------------------------------
+
+# Customer or organisation short name.
+# Used in report filenames and HTML header.
+# Allowed characters: letters, numbers, hyphen, dot, underscore
+customer=Acme-Corp
+
+# RabbitMQ Management API base URL.
+# HTTPS only — no path, no credentials, no trailing slash.
+# Example: https://rmq-abc123.sys.example.internal
+#          https://rmq-abc123.sys.example.internal:15671
+url=https://rmq-abc123.sys.example.internal
+
+# RabbitMQ user ID and password.
+# The user must have the 'monitoring' tag for most checks.
+# Add the 'administrator' tag to unlock user security checks.
+username=monitor-user
+password=S3cur3P@ss
+
+# ------------------------------------------------------------------------------
+# OPTIONAL FIELDS
+# ------------------------------------------------------------------------------
+
+# Cluster short name used in filenames and HTML header.
+# Auto-derived from the URL hostname if omitted (recommended).
+# cluster=rmq-prod-01
+
+# Expected number of cluster nodes for the node availability check.
+# Auto-detected from /api/nodes if omitted (recommended).
+# expected_nodes=3
+
+# Directory to write reports into.
+# Default: reports/ folder next to the script file.
+# output=/home/ubuntu/rmq/reports
+
+# ------------------------------------------------------------------------------
+# BOSH DIRECTOR ACCESS — optional, enables BOSH VM inventory check (BOSH-01)
+# All five fields must be provided together.
+# Values here are only applied if the BOSH_* environment variables
+# are not already exported in the shell — environment always takes priority.
+# ------------------------------------------------------------------------------
+
+# BOSH deployment name for the RabbitMQ service instance.
+# Find it by running: bosh deployments
+# bosh_deployment=service-instance_<guid>
+
+# BOSH Director IP address or hostname.
+# bosh_environment=192.168.100.10
+
+# BOSH client username (typically ops_manager on Tanzu Platform).
+# bosh_client=ops_manager
+
+# BOSH client secret / password.
+# bosh_client_secret=<secret>
+
+# Path to the BOSH Director CA certificate file on the jump host.
+# Obtain from Ops Manager: Settings → Advanced Options → Download Root CA Cert
+# bosh_ca_cert=/home/ubuntu/rmq/bosh_ca_cert

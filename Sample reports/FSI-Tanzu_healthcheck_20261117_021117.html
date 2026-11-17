@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title id="page-title">Tanzu RabbitMQ Health Check</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.6 Arial,sans-serif;background:#f0f2f5;color:#17263c}
+a{color:inherit;text-decoration:none}
+
+/* Nav */
+nav{background:#001e3c;padding:10px 24px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:100}
+nav a{color:#90bfff;font-size:13px;padding:4px 8px;border-radius:4px;transition:background .15s}
+nav a:hover{background:#003366;color:white}
+nav .nav-brand{color:white;font-weight:bold;font-size:15px;margin-right:12px}
+
+/* Header */
+header{background:linear-gradient(135deg,#003366 0%,#0063a6 100%);color:white;padding:28px 32px}
+header h1{font-size:26px;font-weight:bold;margin-bottom:6px}
+header .meta{font-size:13px;opacity:.9;line-height:1.8}
+header .meta span{margin-right:20px}
+
+/* Layout */
+.wrap{max-width:1400px;margin:auto;padding:20px}
+
+/* Sections */
+.section{background:white;border-radius:10px;margin:20px 0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.section-header{background:#003a6e;color:white;padding:12px 20px;font-size:15px;font-weight:bold}
+.section-body{padding:20px;overflow-x:auto}
+
+/* Sharing warning banner */
+.warning-banner{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px}
+.warning-banner strong{color:#856404}
+
+/* Summary cards */
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.card{border-radius:8px;padding:16px 20px;text-align:center}
+.card .count{font-size:32px;font-weight:bold;line-height:1}
+.card .label{font-size:12px;margin-top:4px;font-weight:bold;text-transform:uppercase;letter-spacing:.5px}
+.card-critical{background:#ffe4e1;color:#9c2219}
+.card-warning{background:#fff3cd;color:#825800}
+.card-pass{background:#d4edda;color:#155724}
+.card-review{background:#cce5ff;color:#004085}
+.card-nv{background:#e9ecef;color:#495057}
+
+/* Category grid */
+.cat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.cat-tile{border-radius:8px;padding:12px;cursor:pointer;transition:transform .1s;border:2px solid transparent}
+.cat-tile:hover{transform:translateY(-2px)}
+.cat-tile .cat-name{font-size:12px;font-weight:bold;line-height:1.3}
+.cat-tile .cat-pill{margin-top:6px}
+.cat-tile-CRITICAL{background:#ffe4e1;border-color:#f5a09a}
+.cat-tile-WARNING{background:#fff3cd;border-color:#ffd060}
+.cat-tile-PASS{background:#d4edda;border-color:#98d4a7}
+.cat-tile-REVIEW{background:#cce5ff;border-color:#80bdff}
+.cat-tile-NOTVERIFIED{background:#e9ecef;border-color:#ced4da}
+
+/* Status pills */
+.pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:bold;white-space:nowrap}
+.PASS{background:#d4edda;color:#155724}
+.WARNING{background:#fff3cd;color:#825800}
+.CRITICAL{background:#ffe4e1;color:#9c2219}
+.REVIEW{background:#cce5ff;color:#004085}
+.NOTVERIFIED{background:#e9ecef;color:#495057}
+
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;font-size:12px;align-items:center}
+.legend span{padding:3px 10px;border-radius:12px;font-weight:bold}
+
+/* Tables */
+table{border-collapse:collapse;width:100%;font-size:12px}
+th{background:#e8f0fe;color:#1a3d6e;font-weight:bold;padding:10px;text-align:left;border-bottom:2px solid #c5d5ef}
+td{padding:9px 10px;border-bottom:1px solid #e8ecf0;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8faff}
+.row-CRITICAL td{border-left:4px solid #dc3545}
+.row-WARNING td{border-left:4px solid #ffc107}
+.row-PASS td{border-left:4px solid #28a745}
+.row-REVIEW td{border-left:4px solid #007bff}
+.row-NOTVERIFIED td{border-left:4px solid #6c757d}
+
+/* Category group */
+.cat-group{margin-bottom:16px;border:1px solid #dee2e6;border-radius:8px;overflow:hidden}
+.cat-group summary{background:#f1f4f9;padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:bold;font-size:13px;list-style:none}
+.cat-group summary::-webkit-details-marker{display:none}
+.cat-group summary .cat-summary-left{display:flex;align-items:center;gap:10px}
+.cat-group summary .cat-counts{font-size:11px;color:#6c757d;font-weight:normal}
+.cat-group[open] summary{background:#e8f0fe}
+.cat-group table{border-radius:0}
+
+/* Metadata grid */
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.meta-block{font-size:12px}
+.meta-block table th{background:#f1f4f9;color:#333;font-weight:bold}
+.meta-block table td{background:white}
+.status-ok{color:#28a745;font-weight:bold}
+.status-err{color:#dc3545;font-weight:bold}
+.status-na{color:#6c757d}
+
+/* Evidence details */
+details.evidence{border:1px solid #dee2e6;border-radius:5px;margin:5px 0}
+details.evidence summary{padding:6px 10px;cursor:pointer;font-size:11px;color:#555}
+details.evidence pre{padding:10px;font-size:11px;background:#f8f9fa;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Footer */
+footer{background:#001e3c;color:#90bfff;padding:20px 32px;font-size:12px;line-height:1.8}
+footer strong{color:white}
+
+/* Print */
+@media print{
+  nav,footer .no-print{display:none}
+  body{background:white;font-size:12px}
+  .section{box-shadow:none;break-inside:avoid;border:1px solid #ddd}
+  .cat-grid{grid-template-columns:repeat(5,1fr)}
+  .cards{grid-template-columns:repeat(5,1fr)}
+  thead{display:table-header-group}
+  .cat-group{break-inside:avoid}
+  @page{margin:1.5cm;size:A4}
+}
+</style>
+</head>
+<body>
+<nav><span class="nav-brand">Tanzu RabbitMQ Health Check</span><a href="#overview">Overview</a><a href="#action">Action Required</a><a href="#gaps">Evidence Gaps</a><a href="#categories">All Checks</a><a href="#logs">Logs</a></nav>
+<header>
+<h1>Tanzu RabbitMQ Health Check</h1>
+<div class="meta">
+<span><strong>Customer:</strong> FSI-Tanzu</span><span><strong>Cluster:</strong> rmq-c2928b97-d70a-474b-8</span><span><strong>Generated UTC:</strong> 20261117_021117</span><span><strong>Script:</strong> v1.0.0</span></div></header>
+<div class="wrap">
+<div class="warning-banner">
+<strong>⚠ Before sharing this report with Broadcom Support:</strong>
+Review queue names, vhost names, hostnames and topology for any confidential information.
+<strong>Not collected:</strong> passwords, message bodies, user credentials, or payloads.
+Share only with authorized Broadcom Support personnel via approved channels.
+</div>
+<section id="overview" class="section">
+<div class="section-header">Overview &amp; Assessment Coverage</div>
+<div class="section-body">
+<div class="legend">
+<strong>Status key:</strong>
+<span class="pill PASS">PASS</span> Baseline met &nbsp;
+<span class="pill WARNING">WARNING</span> Investigate &nbsp;
+<span class="pill CRITICAL">CRITICAL</span> Act now &nbsp;
+<span class="pill REVIEW">REVIEW</span> Judgment call — not a failure &nbsp;
+<span class="pill NOTVERIFIED">NOT VERIFIED</span> Missing evidence — not a pass
+</div>
+<div class="cards">
+<div class="card card-critical"><div class="count">1</div><div class="label">Critical</div></div>
+<div class="card card-warning"><div class="count">2</div><div class="label">Warning</div></div>
+<div class="card card-pass"><div class="count">31</div><div class="label">Pass</div></div>
+<div class="card card-review"><div class="count">13</div><div class="label">Review</div></div>
+<div class="card card-nv"><div class="count">7</div><div class="label">Not Verified</div></div>
+</div>
+<div class="cat-grid">
+<a href="#cat-tile---service-instance"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Tile &amp; Service Instance</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-bosh-infrastructure"><div class="cat-tile cat-tile-PASS"><div class="cat-name">BOSH Infrastructure</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-cluster---node-health"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Cluster &amp; Node Health</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-memory-management"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Memory Management</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-erlang-runtime"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Erlang Runtime</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-disk---persistence"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Disk &amp; Persistence</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-queue-health"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Queue Health</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-messaging-performance"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Messaging Performance</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-high-availability---quorum"><div class="cat-tile cat-tile-WARNING"><div class="cat-name">High Availability &amp; Quorum</div><div class="cat-pill"><span class="pill WARNING">WARNING</span></div></div></a>
+<a href="#cat-connections---channels"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Connections &amp; Channels</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-rabbitmq-configuration"><div class="cat-tile cat-tile-REVIEW"><div class="cat-name">RabbitMQ Configuration</div><div class="cat-pill"><span class="pill REVIEW">REVIEW</span></div></div></a>
+<a href="#cat-security---tls"><div class="cat-tile cat-tile-CRITICAL"><div class="cat-name">Security &amp; TLS</div><div class="cat-pill"><span class="pill CRITICAL">CRITICAL</span></div></div></a>
+<a href="#cat-rabbitmq-4.x-features"><div class="cat-tile cat-tile-PASS"><div class="cat-name">RabbitMQ 4.x Features</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-monitoring---alerting"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Monitoring &amp; Alerting</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-recovery---operational-readiness"><div class="cat-tile cat-tile-REVIEW"><div class="cat-name">Recovery &amp; Operational Readiness</div><div class="cat-pill"><span class="pill REVIEW">REVIEW</span></div></div></a>
+<a href="#cat-stream-queues"><div class="cat-tile cat-tile-WARNING"><div class="cat-name">Stream Queues</div><div class="cat-pill"><span class="pill WARNING">WARNING</span></div></div></a>
+<a href="#cat-classic-queues"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Classic Queues</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+<a href="#cat-application-health"><div class="cat-tile cat-tile-PASS"><div class="cat-name">Application Health</div><div class="cat-pill"><span class="pill PASS">PASS</span></div></div></a>
+</div>
+<div class="meta-grid">
+<div class="meta-block">
+<table><tr><th colspan="2">Collectors Available</th></tr>
+<tr><td>Bash</td><td class="status-ok">✓ Available</td></tr>
+<tr><td>curl</td><td class="status-ok">✓ Available</td></tr>
+<tr><td>jq</td><td class="status-ok">✓ Available</td></tr>
+<tr><td>OpenSSL</td><td class="status-ok">✓ Available</td></tr>
+<tr><td>BOSH CLI</td><td class="status-ok">✓ Available</td></tr>
+<tr><td>CF CLI</td><td class="status-ok">✓ Available</td></tr>
+</table></div>
+<div class="meta-block">
+<table><tr><th colspan="2">API Endpoint Results</th></tr>
+<tr><td>Expected nodes</td><td>1</td></tr>
+<tr><td>/api/overview</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/nodes</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/health/checks/alarms</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/queues</td><td class="status-na">— Not attempted</td></tr>
+<tr><td>/api/connections</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/channels</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/policies</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/feature-flags</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/shovels</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/federation-links</td><td class="status-ok">✓ HTTP 200</td></tr>
+<tr><td>/api/users</td><td class="status-ok">✓ HTTP 200</td></tr>
+</table></div>
+</div>
+</div></section>
+<section id="action" class="section">
+<div class="section-header">🚨 Action Required (CRITICAL &amp; WARNING)</div>
+<div class="section-body">
+<table><tr><th>ID</th><th>Category</th><th>Check</th><th>Status</th><th>Actual</th><th>Recommendation</th></tr>
+<tr class="row-CRITICAL"><td><strong>SEC-01</strong></td><td>Security &amp; TLS</td><td>Presented TLS certificate expiry</td><td><span class="pill CRITICAL">CRITICAL</span></td><td>0 days remaining</td><td>Renew certificate through the approved platform workflow.</td></tr>
+<tr class="row-WARNING"><td><strong>HA-01</strong></td><td>High Availability &amp; Quorum</td><td>Quorum queue leader balance</td><td><span class="pill WARNING">WARNING</span></td><td>1/1 quorum leaders on node rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</td><td>Rebalance quorum queue leaders using rabbitmq-queues rebalance command.</td></tr>
+<tr class="row-WARNING"><td><strong>STR-02</strong></td><td>Stream Queues</td><td>Stream queue replica health</td><td><span class="pill WARNING">WARNING</span></td><td>2 stream(s) with offline replicas: rabbitmq.internal.osr.messages: online=0/total=1, rabbitmq.internal.osr.metrics: online=0/total=1</td><td>Degraded replicas reduce durability and fault tolerance — investigate offline nodes.</td></tr>
+</table>
+</div></section>
+<section id="gaps" class="section">
+<div class="section-header">📋 Evidence Gaps (NOT VERIFIED — missing access or tooling, not necessarily failures)</div>
+<div class="section-body">
+<p style="margin:0 0 12px;font-size:0.93em;color:#555;">Each row below could not be verified during this run. The <strong>Root Cause</strong> column explains exactly why — permission denied, missing tool, or not collectible via the Management API alone. The <strong>How to fix</strong> column gives the specific action needed to get a result on the next run.</p>
+<table><tr><th>ID</th><th>Category</th><th>Check</th><th>Root Cause</th><th>How to fix</th></tr>
+<tr class="row-NOTVERIFIED"><td><strong>HA-02</strong></td><td>High Availability &amp; Quorum</td><td>Quorum replica majority and leader</td><td><span style="color:#555">Evidence unavailable</span><br><small style="color:#666;font-family:monospace">Detailed replica diagnostics require rabbitmq-queues CLI</small></td><td>Use approved rabbitmq-queues diagnostics for detailed replica status.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">Queue count is insufficient for replica verification</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>TILE-02</strong></td><td>Tile &amp; Service Instance</td><td>Tile patch and service plan</td><td><span style="color:#555">Evidence unavailable</span><br><small style="color:#666;font-family:monospace">Ops Manager inventory not collected</small></td><td>Review Ops Manager deployment and CF service instance details.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">Ops Manager integration not enabled</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>DISK-02</strong></td><td>Disk &amp; Persistence</td><td>Persistent disk I/O latency</td><td><span style="color:#555">Evidence unavailable</span><br><small style="color:#666;font-family:monospace">Historical storage telemetry unavailable</small></td><td>Review BOSH vitals (bosh vms --vitals) or platform storage monitoring.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">No storage telemetry integration</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>MSG-02</strong></td><td>Messaging Performance</td><td>Historical throughput and redelivery trend</td><td><span style="color:#555">Evidence unavailable</span><br><small style="color:#666;font-family:monospace">No time-series data source</small></td><td>Review Prometheus or Tanzu Hub monitoring data for trends.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">Snapshot-only collector</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>CFG-03</strong></td><td>RabbitMQ Configuration</td><td>Runtime parameters and limits</td><td><span style="color:#555;font-weight:600">Not available via Management API</span><br><small style="color:#666;font-family:monospace">Not fully visible via Management API</small></td><td>Collect supported diagnostics and Ops Manager tile configuration.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">Requires broker CLI or Ops Manager access</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>MON-01</strong></td><td>Monitoring &amp; Alerting</td><td>Metrics delivery and alert routing</td><td><span style="color:#555;font-weight:600">Not configured</span><br><small style="color:#666;font-family:monospace">Monitoring integration not configured</small></td><td>Review Tanzu Hub, Healthwatch, or Prometheus scrape configuration.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">No monitoring credentials supplied</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>DR-01</strong></td><td>Recovery &amp; Operational Readiness</td><td>Backup and recovery readiness</td><td><span style="color:#555">Evidence unavailable</span><br><small style="color:#666;font-family:monospace">No recovery evidence collectible via API</small></td><td>Request customer DR runbook and most recent recovery test results.<details style="margin-top:6px"><summary style="font-size:0.85em;cursor:pointer;color:#1b4a7a">evidence detail</summary><pre style="font-size:0.8em;margin:4px 0 0;white-space:pre-wrap">Not inferable from broker API</pre></details></td></tr>
+</table>
+</div></section>
+<section id="categories" class="section">
+<div class="section-header">All Health Checks by Category</div>
+<div class="section-body">
+<details class="cat-group" open>
+<summary><div class="cat-summary-left"><span class="pill PASS">Preflight</span> Execution Prerequisites</div></summary>
+<table><tr><th>Tool</th><th>Status</th><th>Result</th></tr>
+<tr class="row-PASS"><td>Bash</td><td><span class="pill PASS">PASS</span></td><td>Installed</td></tr>
+<tr class="row-PASS"><td>curl</td><td><span class="pill PASS">PASS</span></td><td>Installed</td></tr>
+<tr class="row-PASS"><td>jq</td><td><span class="pill PASS">PASS</span></td><td>Installed</td></tr>
+<tr class="row-PASS"><td>OpenSSL</td><td><span class="pill PASS">PASS</span></td><td>Installed</td></tr>
+<tr class="row-PASS"><td>BOSH CLI</td><td><span class="pill PASS">PASS</span></td><td>Installed</td></tr>
+<tr class="row-PASS"><td>CF CLI</td><td><span class="pill PASS">PASS</span></td><td>Installed</td></tr>
+</table></details>
+<details id="cat-tile---service-instance" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Tile &amp; Service Instance</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 1 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-REVIEW"><td><strong>TILE-01</strong></td><td>RabbitMQ runtime version</td><td><span class="pill REVIEW">REVIEW</span></td><td>4.3.7</td><td>RabbitMQ 4.x (Tanzu tile)</td><td>Verify installed tile patch and version mapping in Ops Manager.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/overview | rabbitmq_version=4.3.7 erlang_version=27.3.4.19 management_version=4.3.7 cluster_name=rabbit@28b00a28-96e4-4515-a90a-6fa2262db269</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>TILE-03</strong></td><td>Management plugin version match</td><td><span class="pill PASS">PASS</span></td><td>4.3.7</td><td>Matches broker version</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/overview | management_version=4.3.7 matches rabbitmq_version=4.3.7</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>TILE-02</strong></td><td>Tile patch and service plan</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>Ops Manager inventory not collected</td><td>Supported tile build and service plan</td><td>Review Ops Manager deployment and CF service instance details.</td><td><details class="evidence"><summary>details</summary><pre>Ops Manager integration not enabled</pre></details></td></tr>
+</table></details>
+<details id="cat-bosh-infrastructure" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> BOSH Infrastructure</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>BOSH-01</strong></td><td>BOSH VM process state</td><td><span class="pill PASS">PASS</span></td><td>running=1 failing=0</td><td>All VMs running</td><td>Investigate failing BOSH VMs via bosh instances --ps.</td><td><details class="evidence"><summary>details</summary><pre>bosh vms output parsed; raw host details excluded</pre></details></td></tr>
+</table></details>
+<details id="cat-cluster---node-health" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Cluster &amp; Node Health</div><div class="cat-counts">6 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>CLU-01</strong></td><td>Node availability</td><td><span class="pill PASS">PASS</span></td><td>1/1 running</td><td>1 nodes expected (auto-detected)</td><td>Investigate unavailable or unexpected nodes via BOSH.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/nodes | total=1 running=1 expected=1 | rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh(running=true,type=disc)</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>CLU-04</strong></td><td>Network partition (split-brain)</td><td><span class="pill PASS">PASS</span></td><td>No partitions detected</td><td>Zero partitions</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/nodes | partitions=[] on all 1 nodes — cluster is not split</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>CLU-05</strong></td><td>Node type (disc vs ram)</td><td><span class="pill PASS">PASS</span></td><td>All nodes are disc type</td><td>All nodes disc type</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>/api/nodes type field</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>CLU-02</strong></td><td>Node resource alarms</td><td><span class="pill PASS">PASS</span></td><td>0 node(s) with active alarms</td><td>0 active memory/disk alarms</td><td>Investigate resource alarms — publishers will be blocked.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/nodes | mem_alarm=false disk_free_alarm=false on all 1 nodes</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>CLU-06</strong></td><td>Virtual host health</td><td><span class="pill PASS">PASS</span></td><td>HTTP 200 — all vhosts healthy</td><td>All vhosts have a running process</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/health/checks/virtual-hosts | HTTP 200 — all vhosts responding</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>CLU-03</strong></td><td>Cluster-wide alarm endpoint</td><td><span class="pill PASS">PASS</span></td><td>HTTP 200 — no cluster alarms</td><td>No cluster alarms</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/health/checks/alarms | HTTP 200 — broker reports no active cluster-wide alarms</pre></details></td></tr>
+</table></details>
+<details id="cat-memory-management" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Memory Management</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>MEM-01</strong></td><td>Memory watermark utilization: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</td><td><span class="pill PASS">PASS</span></td><td>3%</td><td>Warning &gt;=85%, critical &gt;=95% of watermark</td><td>Review memory breakdown, queue growth and allocated capacity.</td><td><details class="evidence"><summary>details</summary><pre>mem_used=160428032 mem_limit=4993700659</pre></details></td></tr>
+</table></details>
+<details id="cat-erlang-runtime" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Erlang Runtime</div><div class="cat-counts">2 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>ERL-01</strong></td><td>File descriptors: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</td><td><span class="pill PASS">PASS</span></td><td>0%</td><td>Warning &gt;=75%, critical &gt;=90%</td><td>Investigate connection count and file descriptor headroom.</td><td><details class="evidence"><summary>details</summary><pre>fd_used=48 fd_total=300000</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>ERL-02</strong></td><td>Erlang processes: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</td><td><span class="pill PASS">PASS</span></td><td>0%</td><td>Warning &gt;=75%, critical &gt;=90%</td><td>Investigate process growth from queue or connection pressure.</td><td><details class="evidence"><summary>details</summary><pre>proc_used=505 proc_total=1048576</pre></details></td></tr>
+</table></details>
+<details id="cat-disk---persistence" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Disk &amp; Persistence</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>DISK-01</strong></td><td>Disk-free headroom: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</td><td><span class="pill PASS">PASS</span></td><td>29896511488 bytes free</td><td>Warning &lt;1.5x disk-free limit; critical &lt;=limit</td><td>Review persistent disk and queue retention policies.</td><td><details class="evidence"><summary>details</summary><pre>disk_free=29896511488 disk_free_limit=12484251648</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>DISK-02</strong></td><td>Persistent disk I/O latency</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>Historical storage telemetry unavailable</td><td>Storage I/O within SLO</td><td>Review BOSH vitals (bosh vms --vitals) or platform storage monitoring.</td><td><details class="evidence"><summary>details</summary><pre>No storage telemetry integration</pre></details></td></tr>
+</table></details>
+<details id="cat-queue-health" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Queue Health</div><div class="cat-counts">5 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>QUE-01</strong></td><td>Queue inventory collected</td><td><span class="pill PASS">PASS</span></td><td>3 queues</td><td>All pages retrieved</td><td>Review queue-level findings below.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues (paginated, page_size=100) | 1 page(s) fetched | 3 total queues</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>QUE-04</strong></td><td>Queue process state</td><td><span class="pill PASS">PASS</span></td><td>All queues running or idle</td><td>All queues running or idle</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>/api/queues state field</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>QUE-02</strong></td><td>Total ready messages</td><td><span class="pill PASS">PASS</span></td><td>0</td><td>Warning &gt;=10000, critical &gt;=50000; customize per workload</td><td>Inspect queues with sustained backlog and investigate consumers.</td><td><details class="evidence"><summary>details</summary><pre>Point-in-time snapshot</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>QUE-03</strong></td><td>Backlogged queues without consumers</td><td><span class="pill PASS">PASS</span></td><td>0 queue(s)</td><td>0 unless intentional</td><td>Confirm expected consumer presence and queue purpose.</td><td><details class="evidence"><summary>details</summary><pre>Queue inventory snapshot</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>QUE-05</strong></td><td>Unacknowledged messages ratio</td><td><span class="pill PASS">PASS</span></td><td>unacked=0 vs ready=0</td><td>Unacked should not exceed 2x ready</td><td>Investigate consumer processing speed and ack latency.</td><td><details class="evidence"><summary>details</summary><pre>Queue inventory snapshot</pre></details></td></tr>
+</table></details>
+<details id="cat-messaging-performance" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Messaging Performance</div><div class="cat-counts">2 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 1 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>MSG-03</strong></td><td>Live redelivery rate</td><td><span class="pill PASS">PASS</span></td><td>redeliver=0/s publish=0/s deliver=0/s</td><td>Redelivery rate near zero</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>/api/overview message_stats</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>MSG-04</strong></td><td>Consumer utilization (slow consumers)</td><td><span class="pill PASS">PASS</span></td><td>0 queue(s) with utilisation &lt;50% and backlog &gt;1000</td><td>Consumer utilisation &gt;=50% on loaded queues</td><td>Investigate consumer processing throughput and prefetch settings.</td><td><details class="evidence"><summary>details</summary><pre>/api/queues consumer_utilisation</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>MSG-01</strong></td><td>Top ready-message queues (snapshot)</td><td><span class="pill REVIEW">REVIEW</span></td><td>rabbitmq.internal.replication/rabbitmq.internal.definition_sync.requests=0; c2928b97-d70a-474b-8cfc-8c1ee258459c/rabbitmq.internal.osr.metrics=0; c2928b97-d70a-474b-8cfc-8c1ee258459c/rabbitmq.internal.osr.messages=0</td><td>Workload-specific backlog SLO</td><td>Compare against monitoring history; a single snapshot cannot prove long-term health.</td><td><details class="evidence"><summary>details</summary><pre>Point-in-time snapshot only</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>MSG-02</strong></td><td>Historical throughput and redelivery trend</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>No time-series data source</td><td>Stable processing; no abnormal accumulation</td><td>Review Prometheus or Tanzu Hub monitoring data for trends.</td><td><details class="evidence"><summary>details</summary><pre>Snapshot-only collector</pre></details></td></tr>
+</table></details>
+<details id="cat-high-availability---quorum" class="cat-group" open>
+<summary><div class="cat-summary-left"><span class="pill WARNING">WARNING</span> High Availability &amp; Quorum</div><div class="cat-counts">0 PASS &nbsp; 1 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-WARNING"><td><strong>HA-01</strong></td><td>Quorum queue leader balance</td><td><span class="pill WARNING">WARNING</span></td><td>1/1 quorum leaders on node rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</td><td>Leaders balanced across nodes (&lt;60% on any single node)</td><td>Rebalance quorum queue leaders using rabbitmq-queues rebalance command.</td><td><details class="evidence"><summary>details</summary><pre>/api/queues leader field</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>HA-02</strong></td><td>Quorum replica majority and leader</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>Detailed replica diagnostics require rabbitmq-queues CLI</td><td>All critical quorum queues have leader and majority</td><td>Use approved rabbitmq-queues diagnostics for detailed replica status.</td><td><details class="evidence"><summary>details</summary><pre>Queue count is insufficient for replica verification</pre></details></td></tr>
+</table></details>
+<details id="cat-connections---channels" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Connections &amp; Channels</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 2 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-REVIEW"><td><strong>CON-01</strong></td><td>Active connections</td><td><span class="pill REVIEW">REVIEW</span></td><td>1 total</td><td>Compare with workload baseline and limits</td><td>Investigate sustained churn or imbalance if historical metrics are available.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/connections | total=1 connections</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>CON-02</strong></td><td>Blocked/blocking connections</td><td><span class="pill PASS">PASS</span></td><td>0 connection(s) blocked or blocking</td><td>0 blocked connections</td><td>Broker is under resource pressure — investigate memory or disk alarms.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/connections | blocked/blocking=0 of 1 — blocked means publisher is being throttled by the broker</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>CON-03</strong></td><td>Active channels</td><td><span class="pill REVIEW">REVIEW</span></td><td>0 channels</td><td>Compare with connection count; &gt;100 channels/connection is a code smell</td><td>Review channel-per-connection ratio in application code.</td><td><details class="evidence"><summary>details</summary><pre>/api/channels</pre></details></td></tr>
+</table></details>
+<details id="cat-rabbitmq-configuration" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill REVIEW">REVIEW</span> RabbitMQ Configuration</div><div class="cat-counts">0 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 2 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-REVIEW"><td><strong>CFG-01</strong></td><td>Queue policy inventory</td><td><span class="pill REVIEW">REVIEW</span></td><td>0 policies (dead ha-mode: 0)</td><td>Approved TTL, DLX, overflow policies; zero ha-mode policies</td><td>Review policy content with customer — verify TTL, DLX and overflow are set appropriately.</td><td><details class="evidence"><summary>details</summary><pre>/api/policies count; raw definitions excluded</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>CFG-02</strong></td><td>Feature flags</td><td><span class="pill REVIEW">REVIEW</span></td><td>total=34 disabled=1 unavailable=0</td><td>All required feature flags enabled</td><td>Review disabled or unavailable feature flags before tile upgrades.</td><td><details class="evidence"><summary>details</summary><pre>/api/feature-flags</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>CFG-03</strong></td><td>Runtime parameters and limits</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>Not fully visible via Management API</td><td>Approved runtime configuration</td><td>Collect supported diagnostics and Ops Manager tile configuration.</td><td><details class="evidence"><summary>details</summary><pre>Requires broker CLI or Ops Manager access</pre></details></td></tr>
+</table></details>
+<details id="cat-security---tls" class="cat-group" open>
+<summary><div class="cat-summary-left"><span class="pill CRITICAL">CRITICAL</span> Security &amp; TLS</div><div class="cat-counts">2 PASS &nbsp; 0 WARNING &nbsp; 1 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>SEC-02</strong></td><td>Default guest user</td><td><span class="pill PASS">PASS</span></td><td>Guest user not found</td><td>Guest user removed or restricted</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/users | total=3 — no guest user (count only; usernames excluded from report)</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>SEC-03</strong></td><td>Administrator user count</td><td><span class="pill PASS">PASS</span></td><td>3 administrator-tagged users (of 3 total)</td><td>&lt;=3 administrators</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/users | total=3, administrators=3</pre></details></td></tr>
+<tr class="row-CRITICAL"><td><strong>SEC-01</strong></td><td>Presented TLS certificate expiry</td><td><span class="pill CRITICAL">CRITICAL</span></td><td>0 days remaining</td><td>Warning &lt;30 days, critical &lt;7 days</td><td>Renew certificate through the approved platform workflow.</td><td><details class="evidence"><summary>details</summary><pre>Source: openssl s_client -connect rmq-c2928b97-d70a-474b-8cfc-8c1ee258459c.sys.fsi.tnz-field-epc.lvn.broadcom.net:443 | notAfter=Nov 16 23:59:59 2026 GMT | 0 days remaining — presented certificate only; full chain trust validated by curl</pre></details></td></tr>
+</table></details>
+<details id="cat-rabbitmq-4.x-features" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> RabbitMQ 4.x Features</div><div class="cat-counts">2 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 1 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>FTR-01</strong></td><td>RabbitMQ 4.x runtime</td><td><span class="pill PASS">PASS</span></td><td>4.3.7</td><td>RabbitMQ 4.x family</td><td>Confirm exact tile patch via Ops Manager.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/overview | rabbitmq_version=4.3.7 — 4.x family confirmed</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>FTR-02</strong></td><td>Queue type inventory</td><td><span class="pill REVIEW">REVIEW</span></td><td>classic=0, quorum=1, stream=2</td><td>Select queue type per workload and HA requirements</td><td>Review classic queues for quorum migration; evaluate stream suitability.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | total=3 | classic=0 quorum=1 stream=2 — business criticality of each queue type is unknown</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>FTR-03</strong></td><td>Khepri metadata store</td><td><span class="pill PASS">PASS</span></td><td>khepri_db=enabled</td><td>Khepri active (Mnesia removed in RMQ 4.x)</td><td>No action — Khepri is the required metadata store for RMQ 4.x.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/feature-flags | khepri_db=enabled — Raft-based metadata store confirmed</pre></details></td></tr>
+</table></details>
+<details id="cat-monitoring---alerting" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Monitoring &amp; Alerting</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>MON-02</strong></td><td>Management stats collection mode</td><td><span class="pill PASS">PASS</span></td><td>rates_mode=basic</td><td>basic or detailed</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/overview | rates_mode=basic — message rate collection is active</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>MON-01</strong></td><td>Metrics delivery and alert routing</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>Monitoring integration not configured</td><td>Required monitoring active</td><td>Review Tanzu Hub, Healthwatch, or Prometheus scrape configuration.</td><td><details class="evidence"><summary>details</summary><pre>No monitoring credentials supplied</pre></details></td></tr>
+</table></details>
+<details id="cat-recovery---operational-readiness" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill REVIEW">REVIEW</span> Recovery &amp; Operational Readiness</div><div class="cat-counts">0 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 2 REVIEW &nbsp; 1 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-REVIEW"><td><strong>DR-03</strong></td><td>Shovel status</td><td><span class="pill REVIEW">REVIEW</span></td><td>No shovels configured</td><td>Shovels if used for DR/WSR replication</td><td>If DR uses shovels, confirm they are configured and running.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/shovels | HTTP 200 — empty list; shovels plugin may not be in use</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>DR-04</strong></td><td>Federation link health</td><td><span class="pill REVIEW">REVIEW</span></td><td>No federation links configured</td><td>All links running (if federation is in use)</td><td>If federation is not in use this is expected. Confirm with application team.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/federation-links | HTTP 200 — empty list; federation plugin may not be in use</pre></details></td></tr>
+<tr class="row-NOTVERIFIED"><td><strong>DR-01</strong></td><td>Backup and recovery readiness</td><td><span class="pill NOTVERIFIED">NOT VERIFIED</span></td><td>No recovery evidence collectible via API</td><td>Tested recovery; approved RPO/RTO</td><td>Request customer DR runbook and most recent recovery test results.</td><td><details class="evidence"><summary>details</summary><pre>Not inferable from broker API</pre></details></td></tr>
+</table></details>
+<details id="cat-stream-queues" class="cat-group" open>
+<summary><div class="cat-summary-left"><span class="pill WARNING">WARNING</span> Stream Queues</div><div class="cat-counts">1 PASS &nbsp; 1 WARNING &nbsp; 0 CRITICAL &nbsp; 1 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>STR-01</strong></td><td>Stream queue state</td><td><span class="pill PASS">PASS</span></td><td>All 2 stream queue(s) running</td><td>All stream queues running</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | streams=2 all in running state</pre></details></td></tr>
+<tr class="row-WARNING"><td><strong>STR-02</strong></td><td>Stream queue replica health</td><td><span class="pill WARNING">WARNING</span></td><td>2 stream(s) with offline replicas: rabbitmq.internal.osr.messages: online=0/total=1, rabbitmq.internal.osr.metrics: online=0/total=1</td><td>All stream replicas online</td><td>Degraded replicas reduce durability and fault tolerance — investigate offline nodes.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | members vs members_online fields per stream queue</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>STR-03</strong></td><td>Stream queues without consumers</td><td><span class="pill REVIEW">REVIEW</span></td><td>2/2 stream queue(s) have no active consumers: rabbitmq.internal.osr.messages, rabbitmq.internal.osr.metrics</td><td>0 unattended streams unless intentional</td><td>Streams retain messages until TTL or max-length is reached. Orphaned streams consume disk indefinitely. Confirm each is intentional.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | streams without consumers=2 of 2</pre></details></td></tr>
+</table></details>
+<details id="cat-classic-queues" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Classic Queues</div><div class="cat-counts">1 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 0 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-PASS"><td><strong>CLS-01</strong></td><td>Classic queue inventory</td><td><span class="pill PASS">PASS</span></td><td>No classic queues in use</td><td>Quorum or stream queues preferred in RMQ 4.x</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | classic=0 — all queues are quorum or stream type</pre></details></td></tr>
+</table></details>
+<details id="cat-application-health" class="cat-group">
+<summary><div class="cat-summary-left"><span class="pill PASS">PASS</span> Application Health</div><div class="cat-counts">4 PASS &nbsp; 0 WARNING &nbsp; 0 CRITICAL &nbsp; 3 REVIEW &nbsp; 0 NOT VERIFIED</div></summary>
+<table><tr><th>ID</th><th>Check</th><th>Status</th><th>Actual</th><th>Baseline</th><th>Recommendation</th><th>Evidence</th></tr>
+<tr class="row-REVIEW"><td><strong>APP-01</strong></td><td>Dead letter queue depth</td><td><span class="pill REVIEW">REVIEW</span></td><td>No queues matching DLQ naming patterns detected</td><td>DLQ pattern check by name</td><td>If dead-lettering is in use, confirm DLX policies are configured. DLQ detection uses naming patterns: dlq, dead, failed, error, -dl, _dl suffixes.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | no queues matched common DLQ naming patterns (dlq, dead*, failed*, error*, *-dl, *_dl)</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>APP-06</strong></td><td>High redelivery rate per queue</td><td><span class="pill PASS">PASS</span></td><td>No queues with sustained high redelivery rate</td><td>Redelivery rate &lt;10% of deliver rate</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/queues | redeliver/deliver ratio within normal range on all queues</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>APP-04</strong></td><td>Consumer channels without prefetch limit</td><td><span class="pill REVIEW">REVIEW</span></td><td>No consumer channels detected at time of scan</td><td>Consumer channels with prefetch configured</td><td>No active consumers via channels at scan time. Re-run during active workload to assess prefetch configuration.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/channels | no channels with consumer_count&gt;0 found at scan time</pre></details></td></tr>
+<tr class="row-REVIEW"><td><strong>APP-05</strong></td><td>Client library versions</td><td><span class="pill REVIEW">REVIEW</span></td><td>1 connection(s) — library breakdown: 1x AMQP 1.0 client 4.3.7</td><td>Supported, up-to-date client libraries in use</td><td>Review client library versions with application teams. Outdated or unsupported clients may have bugs or compatibility issues with RabbitMQ 4.x.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/connections | client_properties.product and .version fields — 0 connection(s) with unidentified library</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>APP-02</strong></td><td>Consumer auto-acknowledgement</td><td><span class="pill PASS">PASS</span></td><td>All 0 application consumer(s) using manual acknowledgement</td><td>All consumers using manual acknowledgement</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/consumers | ack_required=true on all 0 application consumers (internal rabbitmq.* queues excluded)</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>APP-03</strong></td><td>Queues with no exchange bindings</td><td><span class="pill PASS">PASS</span></td><td>All queues have at least one exchange binding</td><td>All queues reachable via exchanges</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/bindings + /api/queues | all queues appear as binding destinations</pre></details></td></tr>
+<tr class="row-PASS"><td><strong>APP-07</strong></td><td>Exchange topology gaps</td><td><span class="pill PASS">PASS</span></td><td>All user-defined exchanges have at least one queue binding</td><td>No exchange topology gaps</td><td>No action.</td><td><details class="evidence"><summary>details</summary><pre>Source: GET /api/exchanges + /api/bindings | all non-default exchanges have bound queues</pre></details></td></tr>
+</table></details>
+</div></section>
+<section id="logs" class="section">
+<div class="section-header">Diagnostic Logs &amp; Evidence</div>
+<div class="section-body">
+<h3 style="margin-bottom:10px;font-size:13px;color:#003a6e">Per-Check Evidence</h3>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>TILE-01</strong> — RabbitMQ runtime version</summary>
+<pre>Actual:   4.3.7
+Baseline: RabbitMQ 4.x (Tanzu tile)
+Evidence: Source: GET /api/overview | rabbitmq_version=4.3.7 erlang_version=27.3.4.19 management_version=4.3.7 cluster_name=rabbit@28b00a28-96e4-4515-a90a-6fa2262db269</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>TILE-03</strong> — Management plugin version match</summary>
+<pre>Actual:   4.3.7
+Baseline: Matches broker version
+Evidence: Source: GET /api/overview | management_version=4.3.7 matches rabbitmq_version=4.3.7</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>MON-02</strong> — Management stats collection mode</summary>
+<pre>Actual:   rates_mode=basic
+Baseline: basic or detailed
+Evidence: Source: GET /api/overview | rates_mode=basic — message rate collection is active</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>FTR-01</strong> — RabbitMQ 4.x runtime</summary>
+<pre>Actual:   4.3.7
+Baseline: RabbitMQ 4.x family
+Evidence: Source: GET /api/overview | rabbitmq_version=4.3.7 — 4.x family confirmed</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>MSG-03</strong> — Live redelivery rate</summary>
+<pre>Actual:   redeliver=0/s publish=0/s deliver=0/s
+Baseline: Redelivery rate near zero
+Evidence: /api/overview message_stats</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLU-01</strong> — Node availability</summary>
+<pre>Actual:   1/1 running
+Baseline: 1 nodes expected (auto-detected)
+Evidence: Source: GET /api/nodes | total=1 running=1 expected=1 | rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh(running=true,type=disc)</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLU-04</strong> — Network partition (split-brain)</summary>
+<pre>Actual:   No partitions detected
+Baseline: Zero partitions
+Evidence: Source: GET /api/nodes | partitions=[] on all 1 nodes — cluster is not split</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLU-05</strong> — Node type (disc vs ram)</summary>
+<pre>Actual:   All nodes are disc type
+Baseline: All nodes disc type
+Evidence: /api/nodes type field</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLU-02</strong> — Node resource alarms</summary>
+<pre>Actual:   0 node(s) with active alarms
+Baseline: 0 active memory/disk alarms
+Evidence: Source: GET /api/nodes | mem_alarm=false disk_free_alarm=false on all 1 nodes</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>MEM-01</strong> — Memory watermark utilization: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</summary>
+<pre>Actual:   3%
+Baseline: Warning &gt;=85%, critical &gt;=95% of watermark
+Evidence: mem_used=160428032 mem_limit=4993700659</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>ERL-01</strong> — File descriptors: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</summary>
+<pre>Actual:   0%
+Baseline: Warning &gt;=75%, critical &gt;=90%
+Evidence: fd_used=48 fd_total=300000</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>ERL-02</strong> — Erlang processes: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</summary>
+<pre>Actual:   0%
+Baseline: Warning &gt;=75%, critical &gt;=90%
+Evidence: proc_used=505 proc_total=1048576</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>DISK-01</strong> — Disk-free headroom: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh</summary>
+<pre>Actual:   29896511488 bytes free
+Baseline: Warning &lt;1.5x disk-free limit; critical &lt;=limit
+Evidence: disk_free=29896511488 disk_free_limit=12484251648</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLU-06</strong> — Virtual host health</summary>
+<pre>Actual:   HTTP 200 — all vhosts healthy
+Baseline: All vhosts have a running process
+Evidence: Source: GET /api/health/checks/virtual-hosts | HTTP 200 — all vhosts responding</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLU-03</strong> — Cluster-wide alarm endpoint</summary>
+<pre>Actual:   HTTP 200 — no cluster alarms
+Baseline: No cluster alarms
+Evidence: Source: GET /api/health/checks/alarms | HTTP 200 — broker reports no active cluster-wide alarms</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>QUE-01</strong> — Queue inventory collected</summary>
+<pre>Actual:   3 queues
+Baseline: All pages retrieved
+Evidence: Source: GET /api/queues (paginated, page_size=100) | 1 page(s) fetched | 3 total queues</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>FTR-02</strong> — Queue type inventory</summary>
+<pre>Actual:   classic=0, quorum=1, stream=2
+Baseline: Select queue type per workload and HA requirements
+Evidence: Source: GET /api/queues | total=3 | classic=0 quorum=1 stream=2 — business criticality of each queue type is unknown</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>QUE-04</strong> — Queue process state</summary>
+<pre>Actual:   All queues running or idle
+Baseline: All queues running or idle
+Evidence: /api/queues state field</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>QUE-02</strong> — Total ready messages</summary>
+<pre>Actual:   0
+Baseline: Warning &gt;=10000, critical &gt;=50000; customize per workload
+Evidence: Point-in-time snapshot</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>QUE-03</strong> — Backlogged queues without consumers</summary>
+<pre>Actual:   0 queue(s)
+Baseline: 0 unless intentional
+Evidence: Queue inventory snapshot</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>QUE-05</strong> — Unacknowledged messages ratio</summary>
+<pre>Actual:   unacked=0 vs ready=0
+Baseline: Unacked should not exceed 2x ready
+Evidence: Queue inventory snapshot</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>MSG-04</strong> — Consumer utilization (slow consumers)</summary>
+<pre>Actual:   0 queue(s) with utilisation &lt;50% and backlog &gt;1000
+Baseline: Consumer utilisation &gt;=50% on loaded queues
+Evidence: /api/queues consumer_utilisation</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>MSG-01</strong> — Top ready-message queues (snapshot)</summary>
+<pre>Actual:   rabbitmq.internal.replication/rabbitmq.internal.definition_sync.requests=0; c2928b97-d70a-474b-8cfc-8c1ee258459c/rabbitmq.internal.osr.metrics=0; c2928b97-d70a-474b-8cfc-8c1ee258459c/rabbitmq.internal.osr.messages=0
+Baseline: Workload-specific backlog SLO
+Evidence: Point-in-time snapshot only</pre></details>
+<details class="evidence"><summary><span class="pill WARNING" style="font-size:10px">WARNING</span> &nbsp;<strong>HA-01</strong> — Quorum queue leader balance</summary>
+<pre>Actual:   1/1 quorum leaders on node rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+Baseline: Leaders balanced across nodes (&lt;60% on any single node)
+Evidence: /api/queues leader field</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>HA-02</strong> — Quorum replica majority and leader</summary>
+<pre>Actual:   Detailed replica diagnostics require rabbitmq-queues CLI
+Baseline: All critical quorum queues have leader and majority
+Evidence: Queue count is insufficient for replica verification</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>STR-01</strong> — Stream queue state</summary>
+<pre>Actual:   All 2 stream queue(s) running
+Baseline: All stream queues running
+Evidence: Source: GET /api/queues | streams=2 all in running state</pre></details>
+<details class="evidence"><summary><span class="pill WARNING" style="font-size:10px">WARNING</span> &nbsp;<strong>STR-02</strong> — Stream queue replica health</summary>
+<pre>Actual:   2 stream(s) with offline replicas: rabbitmq.internal.osr.messages: online=0/total=1, rabbitmq.internal.osr.metrics: online=0/total=1
+Baseline: All stream replicas online
+Evidence: Source: GET /api/queues | members vs members_online fields per stream queue</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>STR-03</strong> — Stream queues without consumers</summary>
+<pre>Actual:   2/2 stream queue(s) have no active consumers: rabbitmq.internal.osr.messages, rabbitmq.internal.osr.metrics
+Baseline: 0 unattended streams unless intentional
+Evidence: Source: GET /api/queues | streams without consumers=2 of 2</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CLS-01</strong> — Classic queue inventory</summary>
+<pre>Actual:   No classic queues in use
+Baseline: Quorum or stream queues preferred in RMQ 4.x
+Evidence: Source: GET /api/queues | classic=0 — all queues are quorum or stream type</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>CON-01</strong> — Active connections</summary>
+<pre>Actual:   1 total
+Baseline: Compare with workload baseline and limits
+Evidence: Source: GET /api/connections | total=1 connections</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>CON-02</strong> — Blocked/blocking connections</summary>
+<pre>Actual:   0 connection(s) blocked or blocking
+Baseline: 0 blocked connections
+Evidence: Source: GET /api/connections | blocked/blocking=0 of 1 — blocked means publisher is being throttled by the broker</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>CON-03</strong> — Active channels</summary>
+<pre>Actual:   0 channels
+Baseline: Compare with connection count; &gt;100 channels/connection is a code smell
+Evidence: /api/channels</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>CFG-01</strong> — Queue policy inventory</summary>
+<pre>Actual:   0 policies (dead ha-mode: 0)
+Baseline: Approved TTL, DLX, overflow policies; zero ha-mode policies
+Evidence: /api/policies count; raw definitions excluded</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>FTR-03</strong> — Khepri metadata store</summary>
+<pre>Actual:   khepri_db=enabled
+Baseline: Khepri active (Mnesia removed in RMQ 4.x)
+Evidence: Source: GET /api/feature-flags | khepri_db=enabled — Raft-based metadata store confirmed</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>CFG-02</strong> — Feature flags</summary>
+<pre>Actual:   total=34 disabled=1 unavailable=0
+Baseline: All required feature flags enabled
+Evidence: /api/feature-flags</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>DR-03</strong> — Shovel status</summary>
+<pre>Actual:   No shovels configured
+Baseline: Shovels if used for DR/WSR replication
+Evidence: Source: GET /api/shovels | HTTP 200 — empty list; shovels plugin may not be in use</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>DR-04</strong> — Federation link health</summary>
+<pre>Actual:   No federation links configured
+Baseline: All links running (if federation is in use)
+Evidence: Source: GET /api/federation-links | HTTP 200 — empty list; federation plugin may not be in use</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>SEC-02</strong> — Default guest user</summary>
+<pre>Actual:   Guest user not found
+Baseline: Guest user removed or restricted
+Evidence: Source: GET /api/users | total=3 — no guest user (count only; usernames excluded from report)</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>SEC-03</strong> — Administrator user count</summary>
+<pre>Actual:   3 administrator-tagged users (of 3 total)
+Baseline: &lt;=3 administrators
+Evidence: Source: GET /api/users | total=3, administrators=3</pre></details>
+<details class="evidence"><summary><span class="pill CRITICAL" style="font-size:10px">CRITICAL</span> &nbsp;<strong>SEC-01</strong> — Presented TLS certificate expiry</summary>
+<pre>Actual:   0 days remaining
+Baseline: Warning &lt;30 days, critical &lt;7 days
+Evidence: Source: openssl s_client -connect rmq-c2928b97-d70a-474b-8cfc-8c1ee258459c.sys.fsi.tnz-field-epc.lvn.broadcom.net:443 | notAfter=Nov 16 23:59:59 2026 GMT | 0 days remaining — presented certificate only; full chain trust validated by curl</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>BOSH-01</strong> — BOSH VM process state</summary>
+<pre>Actual:   running=1 failing=0
+Baseline: All VMs running
+Evidence: bosh vms output parsed; raw host details excluded</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>APP-01</strong> — Dead letter queue depth</summary>
+<pre>Actual:   No queues matching DLQ naming patterns detected
+Baseline: DLQ pattern check by name
+Evidence: Source: GET /api/queues | no queues matched common DLQ naming patterns (dlq, dead*, failed*, error*, *-dl, *_dl)</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>APP-06</strong> — High redelivery rate per queue</summary>
+<pre>Actual:   No queues with sustained high redelivery rate
+Baseline: Redelivery rate &lt;10% of deliver rate
+Evidence: Source: GET /api/queues | redeliver/deliver ratio within normal range on all queues</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>APP-04</strong> — Consumer channels without prefetch limit</summary>
+<pre>Actual:   No consumer channels detected at time of scan
+Baseline: Consumer channels with prefetch configured
+Evidence: Source: GET /api/channels | no channels with consumer_count&gt;0 found at scan time</pre></details>
+<details class="evidence"><summary><span class="pill REVIEW" style="font-size:10px">REVIEW</span> &nbsp;<strong>APP-05</strong> — Client library versions</summary>
+<pre>Actual:   1 connection(s) — library breakdown: 1x AMQP 1.0 client 4.3.7
+Baseline: Supported, up-to-date client libraries in use
+Evidence: Source: GET /api/connections | client_properties.product and .version fields — 0 connection(s) with unidentified library</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>APP-02</strong> — Consumer auto-acknowledgement</summary>
+<pre>Actual:   All 0 application consumer(s) using manual acknowledgement
+Baseline: All consumers using manual acknowledgement
+Evidence: Source: GET /api/consumers | ack_required=true on all 0 application consumers (internal rabbitmq.* queues excluded)</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>APP-03</strong> — Queues with no exchange bindings</summary>
+<pre>Actual:   All queues have at least one exchange binding
+Baseline: All queues reachable via exchanges
+Evidence: Source: GET /api/bindings + /api/queues | all queues appear as binding destinations</pre></details>
+<details class="evidence"><summary><span class="pill PASS" style="font-size:10px">PASS</span> &nbsp;<strong>APP-07</strong> — Exchange topology gaps</summary>
+<pre>Actual:   All user-defined exchanges have at least one queue binding
+Baseline: No exchange topology gaps
+Evidence: Source: GET /api/exchanges + /api/bindings | all non-default exchanges have bound queues</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>TILE-02</strong> — Tile patch and service plan</summary>
+<pre>Actual:   Ops Manager inventory not collected
+Baseline: Supported tile build and service plan
+Evidence: Ops Manager integration not enabled</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>DISK-02</strong> — Persistent disk I/O latency</summary>
+<pre>Actual:   Historical storage telemetry unavailable
+Baseline: Storage I/O within SLO
+Evidence: No storage telemetry integration</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>MSG-02</strong> — Historical throughput and redelivery trend</summary>
+<pre>Actual:   No time-series data source
+Baseline: Stable processing; no abnormal accumulation
+Evidence: Snapshot-only collector</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>CFG-03</strong> — Runtime parameters and limits</summary>
+<pre>Actual:   Not fully visible via Management API
+Baseline: Approved runtime configuration
+Evidence: Requires broker CLI or Ops Manager access</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>MON-01</strong> — Metrics delivery and alert routing</summary>
+<pre>Actual:   Monitoring integration not configured
+Baseline: Required monitoring active
+Evidence: No monitoring credentials supplied</pre></details>
+<details class="evidence"><summary><span class="pill NOTVERIFIED" style="font-size:10px">NOT VERIFIED</span> &nbsp;<strong>DR-01</strong> — Backup and recovery readiness</summary>
+<pre>Actual:   No recovery evidence collectible via API
+Baseline: Tested recovery; approved RPO/RTO
+Evidence: Not inferable from broker API</pre></details>
+<hr style="margin:16px 0;border:none;border-top:1px solid #dee2e6">
+<h3 style="margin-bottom:10px;font-size:13px;color:#003a6e">Execution Log</h3>
+<details class="evidence" open><summary>All API calls and check results (87 entries)</summary><pre>2026-11-17T02:11:17Z | TOOL-bash PASS: Bash
+2026-11-17T02:11:17Z | TOOL-curl PASS: curl
+2026-11-17T02:11:17Z | TOOL-jq PASS: jq
+2026-11-17T02:11:17Z | TOOL-openssl PASS: OpenSSL
+2026-11-17T02:11:17Z | TOOL-bosh PASS: BOSH CLI
+2026-11-17T02:11:17Z | TOOL-cf PASS: CF CLI
+2026-11-17T02:11:19Z | progress: Checking tile &amp; cluster overview...
+2026-11-17T02:11:19Z | GET /api/overview HTTP 200
+2026-11-17T02:11:19Z | TILE-01 REVIEW: RabbitMQ runtime version
+2026-11-17T02:11:19Z | TILE-03 PASS: Management plugin version match
+2026-11-17T02:11:19Z | MON-02 PASS: Management stats collection mode
+2026-11-17T02:11:19Z | FTR-01 PASS: RabbitMQ 4.x runtime
+2026-11-17T02:11:20Z | MSG-03 PASS: Live redelivery rate
+2026-11-17T02:11:20Z | progress: Checking node health, memory, Erlang runtime &amp; disk...
+2026-11-17T02:11:20Z | GET /api/nodes HTTP 200
+2026-11-17T02:11:20Z | expected_nodes auto-detected from API: 1
+2026-11-17T02:11:20Z | CLU-01 PASS: Node availability
+2026-11-17T02:11:20Z | CLU-04 PASS: Network partition (split-brain)
+2026-11-17T02:11:20Z | CLU-05 PASS: Node type (disc vs ram)
+2026-11-17T02:11:20Z | CLU-02 PASS: Node resource alarms
+2026-11-17T02:11:20Z | MEM-01 PASS: Memory watermark utilization: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-17T02:11:20Z | ERL-01 PASS: File descriptors: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-17T02:11:20Z | ERL-02 PASS: Erlang processes: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-17T02:11:20Z | DISK-01 PASS: Disk-free headroom: rabbit@fedd304c-5f43-4ac5-9146-19597709f92b.rabbitmq-server.tp-network.service-instance-c2928b97-d70a-474b-8cfc-8c1ee258459c.bosh
+2026-11-17T02:11:20Z | progress: Checking virtual host health...
+2026-11-17T02:11:20Z | GET /api/health/checks/virtual-hosts HTTP 200
+2026-11-17T02:11:20Z | CLU-06 PASS: Virtual host health
+2026-11-17T02:11:20Z | progress: Checking cluster-wide alarms...
+2026-11-17T02:11:20Z | GET /api/health/checks/alarms HTTP 200
+2026-11-17T02:11:20Z | CLU-03 PASS: Cluster-wide alarm endpoint
+2026-11-17T02:11:20Z | progress: Collecting queue inventory (paginated)...
+2026-11-17T02:11:20Z | GET /api/queues?page=1&amp;page_size=100&amp;pagination=true&amp;disable_stats=false HTTP 200
+2026-11-17T02:11:21Z | QUE-01 PASS: Queue inventory collected
+2026-11-17T02:11:21Z | FTR-02 REVIEW: Queue type inventory
+2026-11-17T02:11:21Z | QUE-04 PASS: Queue process state
+2026-11-17T02:11:21Z | QUE-02 PASS: Total ready messages
+2026-11-17T02:11:21Z | QUE-03 PASS: Backlogged queues without consumers
+2026-11-17T02:11:21Z | QUE-05 PASS: Unacknowledged messages ratio
+2026-11-17T02:11:21Z | MSG-04 PASS: Consumer utilization (slow consumers)
+2026-11-17T02:11:21Z | MSG-01 REVIEW: Top ready-message queues (snapshot)
+2026-11-17T02:11:21Z | HA-01 WARNING: Quorum queue leader balance
+2026-11-17T02:11:21Z | HA-02 NOT VERIFIED: Quorum replica majority and leader
+2026-11-17T02:11:21Z | STR-01 PASS: Stream queue state
+2026-11-17T02:11:21Z | STR-02 WARNING: Stream queue replica health
+2026-11-17T02:11:21Z | STR-03 REVIEW: Stream queues without consumers
+2026-11-17T02:11:22Z | CLS-01 PASS: Classic queue inventory
+2026-11-17T02:11:22Z | progress: Checking connections &amp; channels...
+2026-11-17T02:11:22Z | GET /api/connections HTTP 200
+2026-11-17T02:11:22Z | CON-01 REVIEW: Active connections
+2026-11-17T02:11:22Z | CON-02 PASS: Blocked/blocking connections
+2026-11-17T02:11:22Z | GET /api/channels HTTP 200
+2026-11-17T02:11:22Z | CON-03 REVIEW: Active channels
+2026-11-17T02:11:22Z | progress: Checking policies &amp; feature flags...
+2026-11-17T02:11:22Z | GET /api/policies HTTP 200
+2026-11-17T02:11:22Z | CFG-01 REVIEW: Queue policy inventory
+2026-11-17T02:11:22Z | GET /api/feature-flags HTTP 200
+2026-11-17T02:11:22Z | FTR-03 PASS: Khepri metadata store
+2026-11-17T02:11:22Z | CFG-02 REVIEW: Feature flags
+2026-11-17T02:11:22Z | progress: Checking shovel &amp; federation status...
+2026-11-17T02:11:22Z | GET /api/shovels HTTP 200
+2026-11-17T02:11:22Z | DR-03 REVIEW: Shovel status
+2026-11-17T02:11:22Z | GET /api/federation-links HTTP 200
+2026-11-17T02:11:23Z | DR-04 REVIEW: Federation link health
+2026-11-17T02:11:23Z | progress: Checking security &amp; TLS certificates...
+2026-11-17T02:11:23Z | GET /api/users HTTP 200
+2026-11-17T02:11:23Z | SEC-02 PASS: Default guest user
+2026-11-17T02:11:23Z | SEC-03 PASS: Administrator user count
+2026-11-17T02:11:23Z | SEC-01 CRITICAL: Presented TLS certificate expiry
+2026-11-17T02:11:23Z | progress: Checking BOSH infrastructure...
+2026-11-17T02:11:24Z | BOSH-01 PASS: BOSH VM process state
+2026-11-17T02:11:24Z | progress: Checking application health patterns...
+2026-11-17T02:11:24Z | APP-01 REVIEW: Dead letter queue depth
+2026-11-17T02:11:24Z | APP-06 PASS: High redelivery rate per queue
+2026-11-17T02:11:24Z | APP-04 REVIEW: Consumer channels without prefetch limit
+2026-11-17T02:11:24Z | APP-05 REVIEW: Client library versions
+2026-11-17T02:11:24Z | GET /api/consumers?page=1&amp;page_size=200&amp;pagination=true HTTP 200
+2026-11-17T02:11:25Z | APP-02 PASS: Consumer auto-acknowledgement
+2026-11-17T02:11:25Z | GET /api/bindings HTTP 200
+2026-11-17T02:11:25Z | APP-03 PASS: Queues with no exchange bindings
+2026-11-17T02:11:25Z | GET /api/exchanges HTTP 200
+2026-11-17T02:11:25Z | APP-07 PASS: Exchange topology gaps
+2026-11-17T02:11:25Z | TILE-02 NOT VERIFIED: Tile patch and service plan
+2026-11-17T02:11:25Z | DISK-02 NOT VERIFIED: Persistent disk I/O latency
+2026-11-17T02:11:25Z | MSG-02 NOT VERIFIED: Historical throughput and redelivery trend
+2026-11-17T02:11:25Z | CFG-03 NOT VERIFIED: Runtime parameters and limits
+2026-11-17T02:11:25Z | MON-01 NOT VERIFIED: Metrics delivery and alert routing
+2026-11-17T02:11:25Z | DR-01 NOT VERIFIED: Backup and recovery readiness
+</pre></details>
+<h3 style="margin:16px 0 10px;font-size:13px;color:#003a6e">Errors Log</h3>
+<details class="evidence" open><summary>Errors and failed API calls (0 entries)</summary><pre></pre></details>
+</div></section>
+<footer>
+<strong>FSI-Tanzu — rmq-c2928b97-d70a-474b-8 | 20261117_021117 | Script v1.0.0</strong><br>
+Data collected: cluster topology, node metrics (counts, %, alarms), queue inventory, TLS certificate status, API endpoint responses.<br>
+Not collected: passwords, message bodies, user credentials, payloads, source/destination URIs from shovels.<br>
+Queue names and vhost names appear in this report and may reveal business domain — review before sharing.<br>
+READ-ONLY assessment: no packages installed, no SSH, no config changes made to the cluster.
+</footer>
+</div></body></html>
